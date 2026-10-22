@@ -1,0 +1,43 @@
+name: monitor
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Restore alert history
+        uses: actions/cache@v4
+        with:
+          path: alerted.json
+          key: alerted-${{ github.run_id }}
+          restore-keys: alerted-
+
+      - name: Run monitor
+        run: python monitor.py
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          STUDENT_ID: ${{ secrets.STUDENT_ID }}
+          SCHOOL_PASSWORD: ${{ secrets.SCHOOL_PASSWORD }}
+          SCHOOL_URL: ${{ secrets.SCHOOL_URL }}
+          NOTIFY_START: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
