@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: "0 * * * *"
   workflow_dispatch:
+    inputs:
+      auto:
+        default: "false"
+
+permissions:
+  contents: read
+  actions: write
 
 concurrency:
   group: monitor
@@ -35,9 +42,19 @@ jobs:
       - name: Run monitor
         run: python monitor.py
         env:
+          PYTHONUNBUFFERED: "1"
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
           STUDENT_ID: ${{ secrets.STUDENT_ID }}
           SCHOOL_PASSWORD: ${{ secrets.SCHOOL_PASSWORD }}
           SCHOOL_URL: ${{ secrets.SCHOOL_URL }}
-          NOTIFY_START: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          NOTIFY_START: ${{ github.event_name == 'workflow_dispatch' && inputs.auto != 'true' && '1' || '0' }}
+
+      - name: Start next run
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(TZ=Asia/Tokyo date +%Y%m%d)" -le 20261029 ]; then
+            gh workflow run monitor.yml --repo ${{ github.repository }} -f auto=true
+          fi
