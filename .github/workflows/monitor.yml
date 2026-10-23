@@ -40,6 +40,7 @@ jobs:
           restore-keys: alerted-
 
       - name: Run monitor
+        id: monitor
         timeout-minutes: 57
         continue-on-error: true
         run: python monitor.py
@@ -51,6 +52,17 @@ jobs:
           SCHOOL_PASSWORD: ${{ secrets.SCHOOL_PASSWORD }}
           SCHOOL_URL: ${{ secrets.SCHOOL_URL }}
           NOTIFY_START: ${{ github.event_name == 'workflow_dispatch' && inputs.auto != 'true' && '1' || '0' }}
+
+      - name: Telegram alert if monitor was cut off or crashed
+        if: steps.monitor.outcome != 'success'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=⚠️ Driving school monitor was cut off or crashed (result: ${{ steps.monitor.outcome }}). A new run is being started automatically. If you keep getting this, check the Actions tab on GitHub." \
+            > /dev/null || true
 
       - name: Start next run
         if: success()
