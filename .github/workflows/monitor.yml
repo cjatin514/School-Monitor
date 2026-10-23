@@ -69,6 +69,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "$(TZ=Asia/Tokyo date +%Y%m%d)" -le 20261029 ]; then
+          if [ "$(TZ=Asia/Tokyo date +%Y%m%d)" -le 20261109 ]; then
             gh workflow run monitor.yml --repo ${{ github.repository }} -f auto=true
           fi
