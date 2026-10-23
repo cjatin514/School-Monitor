@@ -19,7 +19,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +40,8 @@ jobs:
           restore-keys: alerted-
 
       - name: Run monitor
+        timeout-minutes: 57
+        continue-on-error: true
         run: python monitor.py
         env:
           PYTHONUNBUFFERED: "1"
