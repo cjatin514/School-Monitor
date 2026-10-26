@@ -2,7 +2,7 @@ name: monitor
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       auto:
@@ -12,6 +12,7 @@ permissions:
   contents: read
   actions: write
 
+# Only one run at a time. A newly queued run waits for the current one to end.
 concurrency:
   group: monitor
   cancel-in-progress: false
@@ -19,15 +20,27 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 65
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@v4
+
+      # Queue the NEXT run right now, at the start of this one.
+      # It waits in line and starts the moment this run ends,
+      # even if this run is cut off, cancelled or crashes.
+      - name: Queue next run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(TZ=Asia/Tokyo date +%Y%m%d)" -le 20261104 ]; then
+            gh workflow run monitor.yml --repo ${{ github.repository }} -f auto=true || true
+          fi
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install Playwright
+        timeout-minutes: 10
         run: |
           pip install playwright
           playwright install --with-deps chromium
@@ -61,14 +74,5 @@ jobs:
         run: |
           curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${CHAT_ID}" \
-            --data-urlencode "text=⚠️ Driving school monitor was cut off or crashed (result: ${{ steps.monitor.outcome }}). A new run is being started automatically. If you keep getting this, check the Actions tab on GitHub." \
+            --data-urlencode "text=⚠️ Driving school monitor was cut off or crashed (result: ${{ steps.monitor.outcome }}). The next run is already queued and will start automatically. If you keep getting this, check the Actions tab on GitHub." \
             > /dev/null || true
-
-      - name: Start next run
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "$(TZ=Asia/Tokyo date +%Y%m%d)" -le 20261104 ]; then
-            gh workflow run monitor.yml --repo ${{ github.repository }} -f auto=true
-          fi
