@@ -23,7 +23,7 @@ CREDENTIALS = {
     "password": os.environ["SCHOOL_PASSWORD"],
 }
 
-END_DATE = date(2026, 11, 4)
+END_DATE = date(2026, 11, 11)
 CHECK_INTERVAL_SECONDS = 60
 RUN_MINUTES = 55  # stop before the 60-minute job limit; next hourly job takes over
 SCAN_RETRIES = 2
